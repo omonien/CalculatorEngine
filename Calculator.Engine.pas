@@ -136,7 +136,7 @@ begin
   DoCalc(
     procedure
     begin
-      FPreviousValue := FPreviousValue + Value;
+      Value := FPreviousValue + Value;
     end);
 end;
 
