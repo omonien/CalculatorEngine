@@ -20,11 +20,14 @@ type
     FActiveOperator: TOperator;
     procedure ProcessNumber(AKey: char);
     procedure ProcessOperator(AKey: char);
+    function OperatorToString(AOperator: TOperator): string;
     function GetOperatorFromKey(AKey: char): TOperator;
     function GetValue: TBCD;
     procedure SetValue(const Value: TBCD);
     function GetValueString: string;
-
+    function GetCurrentOperation: string;
+  private
+    FCurrentOperation: string;
   protected
     procedure TransferValue;
 
@@ -37,17 +40,18 @@ type
     procedure Clear;
     procedure Equal;
 
+    procedure DoCalc(AOperation: TProc);
     procedure DoPlus;
     procedure DoMinus;
     procedure DoMultiply;
     procedure DoDivide;
 
-    procedure DoAfterCalc;
   public
     constructor Create;
     property Value: TBCD read GetValue write SetValue;
     property ValueString: string read GetValueString;
-    Procedure KeyIn(AKey: char); overload;
+    property CurrentOperation: string read GetCurrentOperation;
+    procedure SendKey(AKey: char);
   end;
 
 implementation
@@ -90,34 +94,50 @@ begin
   FActiveOperator := TOp.Divide;
 end;
 
-procedure TCalculatorEngine.DoAfterCalc;
+procedure TCalculatorEngine.DoCalc(AOperation: TProc);
+var
+  LValue: TBCD;
 begin
-  FPreviousValue := 0;
+  LValue := Value;
+  AOperation;
+  FPreviousValue := LValue;
   FActiveOperator := TOp.None;
 end;
 
 procedure TCalculatorEngine.DoDivide;
 begin
-  Value := FPreviousValue / Value;
-  DoAfterCalc;
+  DoCalc(
+    procedure
+    begin
+      Value := FPreviousValue / Value;
+    end);
 end;
 
 procedure TCalculatorEngine.DoMinus;
 begin
-  Value := FPreviousValue - Value;
-  DoAfterCalc;
+  DoCalc(
+    procedure
+    begin
+      Value := FPreviousValue - Value;
+    end);
 end;
 
 procedure TCalculatorEngine.DoMultiply;
 begin
-  Value := FPreviousValue * Value;
-  DoAfterCalc;
+  DoCalc(
+    procedure
+    begin
+      Value := FPreviousValue * Value;
+    end);
 end;
 
 procedure TCalculatorEngine.DoPlus;
 begin
-  Value := FPreviousValue + Value;
-  DoAfterCalc;
+  DoCalc(
+    procedure
+    begin
+      FPreviousValue := Value;
+    end);
 end;
 
 procedure TCalculatorEngine.Equal;
@@ -135,9 +155,10 @@ begin
         DoDivide;
     end;
   end;
+  FActiveOperator := TOp.Equal;
 end;
 
-procedure TCalculatorEngine.KeyIn(AKey: char);
+procedure TCalculatorEngine.SendKey(AKey: char);
 begin
   if CharInSet(AKey, NUMBERS) then
     ProcessNumber(AKey)
@@ -149,6 +170,37 @@ procedure TCalculatorEngine.Multiply;
 begin
   TransferValue;
   FActiveOperator := TOp.Multiply;
+end;
+
+function TCalculatorEngine.OperatorToString(AOperator: TOperator): string;
+begin
+  case AOperator of
+    TCalculatorEngine.TOperator.Plus:
+      result := '+';
+    TCalculatorEngine.TOperator.Minus:
+      result := '-';
+    TCalculatorEngine.TOperator.Multiply:
+      result := '*';
+    TCalculatorEngine.TOperator.Divide:
+      result := '/';
+  end;
+end;
+
+function TCalculatorEngine.GetCurrentOperation: string;
+begin
+  if FActiveOperator = TOp.None then
+  begin
+    FCurrentOperation := '';
+  end
+  else if FActiveOperator <> TOp.Equal then
+  begin
+    FCurrentOperation := Format('%s %s ', [String(FPreviousValue), OperatorToString(FActiveOperator)]);
+    result := FCurrentOperation;
+  end
+  else
+  begin
+    result := FCurrentOperation + Format('%s =', [String(FPreviousValue)]);
+  end;
 end;
 
 function TCalculatorEngine.GetOperatorFromKey(AKey: char): TOperator;
@@ -199,6 +251,13 @@ end;
 
 procedure TCalculatorEngine.ProcessNumber(AKey: char);
 begin
+  // If we come from an executed operation, then reset.
+  if FActiveOperator = TOp.Equal then
+  begin
+    FActiveOperator := TOp.None;
+    FValueString := '';
+  end;
+
   FValueString := FValueString + AKey;
   // cut off  leading zeros
   while (FValueString.Length >= 2) And FValueString.StartsWith('0') do
