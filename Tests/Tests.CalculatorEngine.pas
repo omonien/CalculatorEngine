@@ -90,7 +90,7 @@ procedure TTestCalculatorEngine.TestEnterKeys(const AKeys: string; AExpectedValu
 begin
   for var c in AKeys do
   begin
-    FEngine.KeyIn(c);
+    FEngine.SendKey(c);
   end;
   Assert.AreEqual(AExpectedValue, FEngine.ValueString);
 end;
@@ -99,7 +99,7 @@ procedure TTestCalculatorEngine.TestEnterNumbers(const AKeys: string; AExpectedV
 begin
   for var c in AKeys do
   begin
-    FEngine.KeyIn(c);
+    FEngine.SendKey(c);
   end;
   Assert.AreEqual(AExpectedValue, Integer(FEngine.Value));
 end;
