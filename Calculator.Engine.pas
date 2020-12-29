@@ -28,6 +28,7 @@ type
     function GetCurrentOperation: string;
   private
     FCurrentOperation: string;
+    FIgnoreInvalidInput: boolean;
   protected
     procedure TransferValue;
 
@@ -51,6 +52,7 @@ type
     property Value: TBCD read GetValue write SetValue;
     property ValueString: string read GetValueString;
     property CurrentOperation: string read GetCurrentOperation;
+    property IgnoreInvalidInput: boolean read FIgnoreInvalidInput write FIgnoreInvalidInput default true;
     procedure SendKey(AKey: char);
   end;
 
@@ -77,6 +79,7 @@ end;
 constructor TCalculatorEngine.Create;
 begin
   inherited;
+  FIgnoreInvalidInput := true;
   Clear;
 end;
 
@@ -206,7 +209,7 @@ end;
 function TCalculatorEngine.GetOperatorFromKey(AKey: char): TOperator;
 begin
   case AKey of
-    '=':
+    '=', #13:
       result := TOp.Equal;
     '.':
       result := TOp.Decimal;
@@ -223,7 +226,8 @@ begin
     'c':
       result := TOp.Clear;
   else
-    raise Exception.Create('Invalid operator!');
+    if not IgnoreInvalidInput then
+      raise Exception.Create('Invalid operator!');
   end;
 end;
 
